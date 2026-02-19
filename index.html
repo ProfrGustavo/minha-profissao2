@@ -1,162 +1,350 @@
+<!-- mural-profissional.html -->
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Técnico em TI | Portfólio Profissional</title>
+    <title>Mural Profissional da Turma</title>
+    <!-- CSS direto aqui -->
     <style>
-        /* Configurações Gerais */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
+        
         body {
-            background-color: #0f172a;
-            color: #f8fafc;
-            line-height: 1.6;
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
         }
-
-        /* Cabeçalho */
-        header {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            padding: 3rem 1rem;
-            text-align: center;
-            border-bottom: 2px solid #38bdf8;
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
         }
-
-        header h1 {
-            font-size: 2.5rem;
-            color: #38bdf8;
-            margin-bottom: 0.5rem;
-        }
-
-        header p {
-            font-size: 1.2rem;
-            color: #94a3b8;
-        }
-
-        /* Conteúdo Principal */
-        main {
-            max-width: 1000px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-        }
-
-        section {
-            margin-bottom: 3rem;
-        }
-
-        h2 {
-            border-left: 4px solid #38bdf8;
-            padding-left: 1rem;
-            margin-bottom: 1.5rem;
-            color: #f1f5f9;
-        }
-
-        /* Grid de Serviços/Habilidades */
-        .services-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .card {
-            background: #1e293b;
-            padding: 1.5rem;
-            border-radius: 8px;
-            transition: transform 0.3s ease;
-            border: 1px solid #334155;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            border-color: #38bdf8;
-        }
-
-        .card h3 {
-            color: #38bdf8;
-            margin-bottom: 0.8rem;
-        }
-
-        /* Contato */
-        .contact-box {
-            background: #38bdf8;
-            color: #0f172a;
-            padding: 2rem;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .btn-whatsapp {
-            display: inline-block;
-            margin-top: 1rem;
-            padding: 0.8rem 1.5rem;
-            background: #0f172a;
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-
-        /* Rodapé */
-        footer {
+            padding: 40px;
+            border-radius: 10px;
             text-align: center;
-            padding: 2rem;
-            color: #64748b;
-            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+        
+        .form-perfil {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .form-perfil input,
+        .form-perfil textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .perfil-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .mensagem-form {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .mensagem-item {
+            background: white;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background: #764ba2;
+        }
+        
+        .erro {
+            background: #ff4444;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .sucesso {
+            background: #00C851;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
         }
     </style>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Mural Profissional da Turma</h1>
+            <p>Crie seu perfil e receba mensagens dos colegas!</p>
+        </div>
 
-    <header>
-        <h1>Nome do Profissional</h1>
-        <p>Técnico em TI | Especialista em Suporte e Infraestrutura</p>
-    </header>
+        <!-- Abas para alternar entre Criar Perfil e Ver Perfis -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button onclick="mostrarAba('criar')" style="margin-right: 10px;">➕ Criar Perfil</button>
+            <button onclick="mostrarAba('ver')">👥 Ver Perfis</button>
+        </div>
 
-    <main>
-        <section id="sobre">
-            <h2>Sobre Mim</h2>
-            <p>Profissional dedicado à resolução de problemas tecnológicos com foco em eficiência e redução de downtime. Com experiência em suporte técnico, montagem de redes e manutenção de hardware, ajudo empresas e indivíduos a manterem sua infraestrutura digital sempre funcional.</p>
-        </section>
+        <!-- ABA 1: Criar Perfil -->
+        <div id="aba-criar" class="form-perfil">
+            <h2 style="margin-bottom: 20px;">Crie seu Perfil</h2>
+            
+            <div id="mensagem-criar"></div>
+            
+            <input type="text" id="nome" placeholder="Seu nome completo" required>
+            <input type="text" id="profissao" placeholder="Sua profissão (ex: Estudante de Programação)" required>
+            <textarea id="descricao" placeholder="Fale um pouco sobre você..." rows="4"></textarea>
+            <input type="url" id="foto" placeholder="URL da sua foto (opcional)">
+            
+            <button onclick="criarPerfil()">Criar Perfil</button>
+        </div>
 
-        <section id="servicos">
-            <h2>Especialidades</h2>
-            <div class="services-grid">
-                <div class="card">
-                    <h3>Suporte Técnico</h3>
-                    <p>Resolução de problemas em Windows/Linux, remoção de malwares e otimização de sistemas.</p>
-                </div>
-                <div class="card">
-                    <h3>Redes de Computadores</h3>
-                    <p>Configuração de roteadores, switches, cabeamento estruturado e redes Wi-Fi corporativas.</p>
-                </div>
-                <div class="card">
-                    <h3>Hardware</h3>
-                    <p>Montagem de máquinas de alta performance (Gamer/Workstation) e reparo de periféricos.</p>
-                </div>
-                <div class="card">
-                    <h3>Servidores & Cloud</h3>
-                    <p>Gestão de backups, virtualização e suporte básico a servidores Windows e Linux.</p>
+        <!-- ABA 2: Ver Perfis e Mensagens -->
+        <div id="aba-ver" style="display: none;">
+            <div id="lista-perfis"></div>
+            
+            <!-- Área de mensagens (aparece quando seleciona um perfil) -->
+            <div id="area-mensagens" style="display: none; margin-top: 30px;">
+                <div class="form-perfil">
+                    <h3 id="titulo-perfil"></h3>
+                    
+                    <div class="mensagem-form">
+                        <h4>Deixe uma mensagem</h4>
+                        <input type="text" id="nome-remetente" placeholder="Seu nome" style="margin: 10px 0;">
+                        <textarea id="texto-mensagem" placeholder="Sua mensagem..." rows="3" style="margin: 10px 0;"></textarea>
+                        <button onclick="enviarMensagem()">Enviar Mensagem</button>
+                    </div>
+                    
+                    <div id="lista-mensagens" style="margin-top: 20px;"></div>
                 </div>
             </div>
-        </section>
+        </div>
+    </div>
 
-        <section id="contato">
-            <div class="contact-box">
-                <h2>Precisa de suporte agora?</h2>
-                <p>Estou disponível para projetos pontuais ou contrato de manutenção preventiva.</p>
-                <a href="#" class="btn-whatsapp">Chamar no WhatsApp</a>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        &copy; 2026 Portfólio Técnico em TI. Desenvolvido com foco em performance.
-    </footer>
-
+    <script>
+        // 🔑 CONFIGURAÇÃO SUPER SIMPLES - COLE AQUI SEUS DADOS DO SUPABASE
+        // PASSO 1: Criar conta em https://supabase.com
+        // PASSO 2: Criar um projeto
+        // PASSO 3: Copiar URL e Key abaixo:
+        
+        const SUPABASE_URL = 'https://seu-projeto.supabase.co'  // 👈 COLE SUA URL AQUI
+        const SUPABASE_KEY = 'sua-chave-anon-aqui'              // 👈 COLE SUA KEY AQUI
+        
+        // Inicializar Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+        
+        // Variáveis globais
+        let perfilSelecionado = null
+        
+        // Mostrar/Esconder abas
+        function mostrarAba(aba) {
+            if (aba === 'criar') {
+                document.getElementById('aba-criar').style.display = 'block'
+                document.getElementById('aba-ver').style.display = 'none'
+            } else {
+                document.getElementById('aba-criar').style.display = 'none'
+                document.getElementById('aba-ver').style.display = 'block'
+                carregarPerfis()
+            }
+        }
+        
+        // Função para criar perfil
+        async function criarPerfil() {
+            const nome = document.getElementById('nome').value
+            const profissao = document.getElementById('profissao').value
+            const descricao = document.getElementById('descricao').value
+            const foto_url = document.getElementById('foto').value
+            
+            if (!nome || !profissao) {
+                mostrarMensagem('criar', 'Preencha nome e profissão!', 'erro')
+                return
+            }
+            
+            try {
+                // Criar slug simples
+                const slug = nome.toLowerCase().replace(/\s+/g, '-')
+                
+                const { data, error } = await supabase
+                    .from('perfis')
+                    .insert([
+                        {
+                            nome: nome,
+                            profissao: profissao,
+                            descricao: descricao,
+                            foto_url: foto_url || null,
+                            slug: slug
+                        }
+                    ])
+                
+                if (error) throw error
+                
+                mostrarMensagem('criar', 'Perfil criado com sucesso!', 'sucesso')
+                
+                // Limpar formulário
+                document.getElementById('nome').value = ''
+                document.getElementById('profissao').value = ''
+                document.getElementById('descricao').value = ''
+                document.getElementById('foto').value = ''
+                
+            } catch (error) {
+                mostrarMensagem('criar', 'Erro ao criar perfil: ' + error.message, 'erro')
+            }
+        }
+        
+        // Carregar lista de perfis
+        async function carregarPerfis() {
+            try {
+                const { data: perfis, error } = await supabase
+                    .from('perfis')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                
+                if (error) throw error
+                
+                const listaPerfis = document.getElementById('lista-perfis')
+                
+                if (perfis.length === 0) {
+                    listaPerfis.innerHTML = '<p style="text-align: center;">Nenhum perfil cadastrado ainda. Crie o seu!</p>'
+                    return
+                }
+                
+                listaPerfis.innerHTML = perfis.map(perfil => `
+                    <div class="perfil-card" onclick="selecionarPerfil('${perfil.id}', '${perfil.nome}')" style="cursor: pointer;">
+                        <h3>${perfil.nome}</h3>
+                        <p><strong>${perfil.profissao}</strong></p>
+                        <p>${perfil.descricao || ''}</p>
+                        <small>Clique para ver mensagens ➡️</small>
+                    </div>
+                `).join('')
+                
+            } catch (error) {
+                console.error('Erro:', error)
+            }
+        }
+        
+        // Selecionar um perfil para ver mensagens
+        async function selecionarPerfil(id, nome) {
+            perfilSelecionado = id
+            document.getElementById('titulo-perfil').innerHTML = `Mensagens para ${nome}`
+            document.getElementById('area-mensagens').style.display = 'block'
+            await carregarMensagens()
+        }
+        
+        // Carregar mensagens do perfil selecionado
+        async function carregarMensagens() {
+            if (!perfilSelecionado) return
+            
+            try {
+                const { data: mensagens, error } = await supabase
+                    .from('mensagens')
+                    .select('*')
+                    .eq('perfil_id', perfilSelecionado)
+                    .order('created_at', { ascending: false })
+                
+                if (error) throw error
+                
+                const listaMensagens = document.getElementById('lista-mensagens')
+                
+                if (mensagens.length === 0) {
+                    listaMensagens.innerHTML = '<p style="text-align: center;">Nenhuma mensagem ainda. Seja o primeiro a comentar!</p>'
+                    return
+                }
+                
+                listaMensagens.innerHTML = mensagens.map(msg => `
+                    <div class="mensagem-item">
+                        <strong>${msg.nome_remetente}</strong>
+                        <small style="float: right;">${new Date(msg.created_at).toLocaleString()}</small>
+                        <p style="margin-top: 10px;">${msg.mensagem}</p>
+                    </div>
+                `).join('')
+                
+            } catch (error) {
+                console.error('Erro:', error)
+            }
+        }
+        
+        // Enviar mensagem
+        async function enviarMensagem() {
+            const nome = document.getElementById('nome-remetente').value
+            const texto = document.getElementById('texto-mensagem').value
+            
+            if (!nome || !texto) {
+                alert('Preencha seu nome e a mensagem!')
+                return
+            }
+            
+            try {
+                const { error } = await supabase
+                    .from('mensagens')
+                    .insert([
+                        {
+                            perfil_id: perfilSelecionado,
+                            nome_remetente: nome,
+                            mensagem: texto
+                        }
+                    ])
+                
+                if (error) throw error
+                
+                // Limpar formulário
+                document.getElementById('nome-remetente').value = ''
+                document.getElementById('texto-mensagem').value = ''
+                
+                // Recarregar mensagens
+                await carregarMensagens()
+                
+                alert('Mensagem enviada!')
+                
+            } catch (error) {
+                alert('Erro ao enviar mensagem: ' + error.message)
+            }
+        }
+        
+        // Mostrar mensagens de feedback
+        function mostrarMensagem(local, texto, tipo) {
+            const div = document.getElementById(`mensagem-${local}`)
+            div.innerHTML = `<div class="${tipo}">${texto}</div>`
+            setTimeout(() => {
+                div.innerHTML = ''
+            }, 3000)
+        }
+        
+        // Iniciar mostrando a aba de criar perfil
+        mostrarAba('criar')
+    </script>
 </body>
 </html>
