@@ -187,40 +187,41 @@
     </div>
 
     <script>
-        // 🔑 CONFIGURAÇÃO SIMPLES - COLE SEUS DADOS AQUI
+        // 🔑 CONFIGURAÇÃO ÚNICA - COLE SEUS DADOS AQUI
         const SUPABASE_URL = 'https://ipfkiedyuvfbqgwhpjrg.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_CzeOb-GVArfflJbOa01nmA_Url_bcvt';
         
-        // Inicializar Supabase
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Inicializar Supabase (UMA ÚNICA VEZ)
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         // Variáveis globais
         let perfilSelecionado = null;
 
-        // Mostrar/Esconder abas
+        // Funções globais
         window.mostrarAba = function(aba) {
             console.log('Mostrando aba:', aba);
             const abaCriar = document.getElementById('aba-criar');
             const abaVer = document.getElementById('aba-ver');
             
-            if (aba === 'criar') {
-                abaCriar.style.display = 'block';
-                abaVer.style.display = 'none';
-            } else {
-                abaCriar.style.display = 'none';
-                abaVer.style.display = 'block';
-                carregarPerfis();
+            if (abaCriar && abaVer) {
+                if (aba === 'criar') {
+                    abaCriar.style.display = 'block';
+                    abaVer.style.display = 'none';
+                } else {
+                    abaCriar.style.display = 'none';
+                    abaVer.style.display = 'block';
+                    carregarPerfis();
+                }
             }
         };
-        
-        // Função para criar perfil
+
         window.criarPerfil = async function() {
             console.log('Iniciando criação de perfil...');
             
-            const nome = document.getElementById('nome').value;
-            const profissao = document.getElementById('profissao').value;
-            const descricao = document.getElementById('descricao').value;
-            const foto_url = document.getElementById('foto').value;
+            const nome = document.getElementById('nome')?.value;
+            const profissao = document.getElementById('profissao')?.value;
+            const descricao = document.getElementById('descricao')?.value;
+            const foto_url = document.getElementById('foto')?.value;
             
             console.log('Dados:', { nome, profissao, descricao, foto_url });
             
@@ -239,7 +240,7 @@
                 
                 console.log('Slug gerado:', slug);
                 
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('perfis')
                     .insert([
                         {
@@ -269,22 +270,97 @@
                 console.error('Erro detalhado:', error);
                 let mensagem = 'Erro ao criar perfil: ';
                 
-                if (error.message.includes('relation') && error.message.includes('does not exist')) {
-                    mensagem = 'Tabela "perfis" não existe! Crie as tabelas no SQL Editor do Supabase.';
+                if (error.message && error.message.includes('relation') && error.message.includes('does not exist')) {
+                    mensagem = '❌ Tabela "perfis" não existe! Crie as tabelas no SQL Editor do Supabase.';
+                    console.log('%c⚠️ EXECUTE ESTE SQL NO SUPABASE:', 'font-size: 16px; font-weight: bold; color: red;');
+                    console.log(`
+                        CREATE TABLE perfis (
+                            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+                            nome TEXT NOT NULL,
+                            profissao TEXT NOT NULL,
+                            descricao TEXT,
+                            foto_url TEXT,
+                            slug TEXT UNIQUE,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                        );
+
+                        CREATE TABLE mensagens (
+                            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+                            perfil_id UUID REFERENCES perfis(id) ON DELETE CASCADE,
+                            nome_remetente TEXT NOT NULL,
+                            mensagem TEXT NOT NULL,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                        );
+
+                        ALTER TABLE perfis ENABLE ROW LEVEL SECURITY;
+                        ALTER TABLE mensagens ENABLE ROW LEVEL SECURITY;
+
+                        CREATE POLICY "Permitir tudo perfis" ON perfis FOR ALL USING (true);
+                        CREATE POLICY "Permitir tudo mensagens" ON mensagens FOR ALL USING (true);
+                    `);
                 } else {
-                    mensagem += error.message;
+                    mensagem += error.message || 'Erro desconhecido';
                 }
                 
                 mostrarMensagem('criar', mensagem, 'erro');
             }
         };
-        
-        // Carregar lista de perfis
+
+        window.selecionarPerfil = async function(id, nome) {
+            console.log('Perfil selecionado:', id, nome);
+            perfilSelecionado = id;
+            const tituloPerfil = document.getElementById('titulo-perfil');
+            const areaMensagens = document.getElementById('area-mensagens');
+            
+            if (tituloPerfil) tituloPerfil.innerHTML = `Mensagens para ${nome}`;
+            if (areaMensagens) areaMensagens.style.display = 'block';
+            
+            await carregarMensagens();
+        };
+
+        window.enviarMensagem = async function() {
+            const nome = document.getElementById('nome-remetente')?.value;
+            const texto = document.getElementById('texto-mensagem')?.value;
+            
+            if (!nome || !texto) {
+                alert('Preencha seu nome e a mensagem!');
+                return;
+            }
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('mensagens')
+                    .insert([
+                        {
+                            perfil_id: perfilSelecionado,
+                            nome_remetente: nome,
+                            mensagem: texto
+                        }
+                    ]);
+                
+                if (error) throw error;
+                
+                // Limpar formulário
+                document.getElementById('nome-remetente').value = '';
+                document.getElementById('texto-mensagem').value = '';
+                
+                // Recarregar mensagens
+                await carregarMensagens();
+                
+                alert('Mensagem enviada com sucesso!');
+                
+            } catch (error) {
+                console.error('Erro ao enviar:', error);
+                alert('Erro ao enviar mensagem: ' + (error.message || 'Erro desconhecido'));
+            }
+        };
+
+        // Funções internas
         async function carregarPerfis() {
             console.log('Carregando perfis...');
             
             try {
-                const { data: perfis, error } = await supabase
+                const { data: perfis, error } = await supabaseClient
                     .from('perfis')
                     .select('*')
                     .order('created_at', { ascending: false });
@@ -313,24 +389,14 @@
                 document.getElementById('lista-perfis').innerHTML = '<p class="erro">Erro ao carregar perfis. Verifique o console.</p>';
             }
         }
-        
-        // Selecionar um perfil para ver mensagens
-        window.selecionarPerfil = async function(id, nome) {
-            console.log('Perfil selecionado:', id, nome);
-            perfilSelecionado = id;
-            document.getElementById('titulo-perfil').innerHTML = `Mensagens para ${nome}`;
-            document.getElementById('area-mensagens').style.display = 'block';
-            await carregarMensagens();
-        };
-        
-        // Carregar mensagens do perfil selecionado
+
         async function carregarMensagens() {
             if (!perfilSelecionado) return;
             
             console.log('Carregando mensagens do perfil:', perfilSelecionado);
             
             try {
-                const { data: mensagens, error } = await supabase
+                const { data: mensagens, error } = await supabaseClient
                     .from('mensagens')
                     .select('*')
                     .eq('perfil_id', perfilSelecionado)
@@ -357,46 +423,7 @@
                 console.error('Erro ao carregar mensagens:', error);
             }
         }
-        
-        // Enviar mensagem
-        window.enviarMensagem = async function() {
-            const nome = document.getElementById('nome-remetente').value;
-            const texto = document.getElementById('texto-mensagem').value;
-            
-            if (!nome || !texto) {
-                alert('Preencha seu nome e a mensagem!');
-                return;
-            }
-            
-            try {
-                const { error } = await supabase
-                    .from('mensagens')
-                    .insert([
-                        {
-                            perfil_id: perfilSelecionado,
-                            nome_remetente: nome,
-                            mensagem: texto
-                        }
-                    ]);
-                
-                if (error) throw error;
-                
-                // Limpar formulário
-                document.getElementById('nome-remetente').value = '';
-                document.getElementById('texto-mensagem').value = '';
-                
-                // Recarregar mensagens
-                await carregarMensagens();
-                
-                alert('Mensagem enviada com sucesso!');
-                
-            } catch (error) {
-                console.error('Erro ao enviar:', error);
-                alert('Erro ao enviar mensagem: ' + error.message);
-            }
-        };
-        
-        // Mostrar mensagens de feedback
+
         function mostrarMensagem(local, texto, tipo) {
             const div = document.getElementById(`mensagem-${local}`);
             if (!div) return;
@@ -405,25 +432,18 @@
                 div.innerHTML = '';
             }, 5000);
         }
-        
-        // Testar conexão ao iniciar
-        (async function() {
-            console.log('Testando conexão com Supabase...');
-            try {
-                const { error } = await supabase.from('perfis').select('count', { count: 'exact', head: true });
-                if (error) {
-                    console.error('Erro de conexão:', error);
-                    mostrarMensagem('criar', '⚠️ Execute o SQL no Supabase para criar as tabelas!', 'erro');
-                } else {
-                    console.log('✅ Conexão OK!');
-                }
-            } catch (error) {
-                console.error('Erro ao testar conexão:', error);
+
+        // Inicialização
+        (function() {
+            console.log('Iniciando aplicação...');
+            console.log('URL:', SUPABASE_URL);
+            console.log('Key:', SUPABASE_KEY.substring(0, 10) + '...');
+            
+            // Mostrar aba criar por padrão
+            if (typeof window.mostrarAba === 'function') {
+                window.mostrarAba('criar');
             }
         })();
-        
-        // Mostrar aba criar por padrão
-        mostrarAba('criar');
     </script>
 </body>
 </html>
