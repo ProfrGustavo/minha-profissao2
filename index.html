@@ -56,6 +56,13 @@
             border-radius: 10px;
             margin-bottom: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .perfil-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
         
         .mensagem-form {
@@ -81,6 +88,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
+            transition: background 0.2s;
         }
         
         button:hover {
@@ -102,9 +110,25 @@
             border-radius: 5px;
             margin: 10px 0;
         }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .foto-perfil {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+        }
     </style>
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Dotenv para ler .env no frontend (apenas para desenvolvimento) -->
+    <script src="https://cdn.jsdelivr.net/npm/dotenv@16.0.3/lib/main.js"></script>
 </head>
 <body>
     <div class="container">
@@ -135,7 +159,7 @@
 
         <!-- ABA 2: Ver Perfis e Mensagens -->
         <div id="aba-ver" style="display: none;">
-            <div id="lista-perfis"></div>
+            <div id="lista-perfis" class="loading">Carregando perfis...</div>
             
             <!-- Área de mensagens (aparece quando seleciona um perfil) -->
             <div id="area-mensagens" style="display: none; margin-top: 30px;">
@@ -156,19 +180,116 @@
     </div>
 
     <script>
-        // 🔑 CONFIGURAÇÃO SUPER SIMPLES - COLE AQUI SEUS DADOS DO SUPABASE
-        // PASSO 1: Criar conta em https://supabase.com
-        // PASSO 2: Criar um projeto
-        // PASSO 3: Copiar URL e Key abaixo:
+        // 🔑 CONFIGURAÇÃO - Agora usando variáveis de ambiente
+        // Em desenvolvimento, você precisa ter um arquivo .env na raiz
         
-        const SUPABASE_URL = ''  // 👈 COLE SUA URL AQUI
-        const SUPABASE_KEY = 'h'              // 👈 COLE SUA KEY AQUI
-        
-        // Inicializar Supabase
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-        
-        // Variáveis globais
-        let perfilSelecionado = null
+        // Função para carregar variáveis do .env
+        async function carregarConfig() {
+            try {
+                // Tenta carregar do .env (apenas em desenvolvimento)
+                // Na Vercel, as variáveis vão vir do ambiente
+                const SUPABASE_URL = import.meta?.env?.VITE_SUPABASE_URL || 
+                                    'https://ipfkiedyuvfbqgwhpjrg.supabase.co'; // Fallback para teste
+                
+                const SUPABASE_KEY = import.meta?.env?.VITE_SUPABASE_ANON_KEY || 
+                                    'sua_chave_aqui'; // Substitua pela sua chave
+                
+                return { SUPABASE_URL, SUPABASE_KEY };
+            } catch (error) {
+                // Fallback para quando não tem import.meta.env (HTML puro)
+                return {
+                    SUPABASE_URL: 'https://ipfkiedyuvfbqgwhpjrg.supabase.co',
+                    SUPABASE_KEY: 'sb_publishable_CzeOb-GVArfflJbOa01nmA_Url_bcvt' // COLE SUA PUBLISHABLE KEY AQUI
+                };
+            }
+        }
+
+        // Inicializar Supabase com as configurações
+        let supabase;
+        let perfilSelecionado = null;
+
+        // Inicialização assíncrona
+        (async function init() {
+            try {
+                const config = await carregarConfig();
+                
+                if (!config.SUPABASE_KEY || config.SUPABASE_KEY === 'sua_chave_aqui') {
+                    mostrarErroConfiguracao();
+                    return;
+                }
+                
+                supabase = window.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_KEY);
+                console.log('✅ Conectado ao Supabase');
+                
+                // Testar conexão
+                await testarConexao();
+                
+            } catch (error) {
+                console.error('❌ Erro ao conectar:', error);
+                mostrarErroConfiguracao();
+            }
+        })();
+
+        function mostrarErroConfiguracao() {
+            const container = document.querySelector('.container');
+            const erroDiv = document.createElement('div');
+            erroDiv.className = 'erro';
+            erroDiv.innerHTML = `
+                <strong>⚠️ Configuração necessária!</strong><br>
+                Para usar este mural, você precisa:<br>
+                1. Criar as tabelas no Supabase (veja o console)<br>
+                2. Colocar sua chave publishable no lugar de "sua_chave_aqui"<br>
+                3. Recarregar a página
+            `;
+            container.insertBefore(erroDiv, container.firstChild);
+        }
+
+        async function testarConexao() {
+            try {
+                const { error } = await supabase.from('perfis').select('count', { count: 'exact', head: true });
+                if (error) {
+                    console.log('📋 Tabelas não encontradas. Execute o SQL abaixo no Supabase:');
+                    mostrarSqlCriacao();
+                }
+            } catch (error) {
+                console.log('Erro ao testar conexão:', error);
+            }
+        }
+
+        function mostrarSqlCriacao() {
+            console.log(`
+                -- CRIE ESTAS TABELAS NO SQL EDITOR DO SUPABASE:
+                
+                CREATE TABLE perfis (
+                    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+                    nome TEXT NOT NULL,
+                    profissao TEXT NOT NULL,
+                    descricao TEXT,
+                    foto_url TEXT,
+                    slug TEXT UNIQUE,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+
+                CREATE TABLE mensagens (
+                    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+                    perfil_id UUID REFERENCES perfis(id) ON DELETE CASCADE,
+                    nome_remetente TEXT NOT NULL,
+                    mensagem TEXT NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+
+                -- Ativar RLS (Recomendado)
+                ALTER TABLE perfis ENABLE ROW LEVEL SECURITY;
+                ALTER TABLE mensagens ENABLE ROW LEVEL SECURITY;
+
+                -- Políticas de segurança (permitir tudo para teste)
+                CREATE POLICY "Permitir tudo para perfis" ON perfis
+                    FOR ALL USING (true);
+
+                CREATE POLICY "Permitir tudo para mensagens" ON mensagens
+                    FOR ALL USING (true);
+            `);
+        }
         
         // Mostrar/Esconder abas
         function mostrarAba(aba) {
@@ -184,6 +305,11 @@
         
         // Função para criar perfil
         async function criarPerfil() {
+            if (!supabase) {
+                alert('Aguardando conexão com Supabase. Tente novamente.')
+                return
+            }
+
             const nome = document.getElementById('nome').value
             const profissao = document.getElementById('profissao').value
             const descricao = document.getElementById('descricao').value
@@ -196,7 +322,11 @@
             
             try {
                 // Criar slug simples
-                const slug = nome.toLowerCase().replace(/\s+/g, '-')
+                const slug = nome.toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-|-$/g, '')
                 
                 const { data, error } = await supabase
                     .from('perfis')
@@ -227,6 +357,8 @@
         
         // Carregar lista de perfis
         async function carregarPerfis() {
+            if (!supabase) return
+
             try {
                 const { data: perfis, error } = await supabase
                     .from('perfis')
@@ -237,22 +369,24 @@
                 
                 const listaPerfis = document.getElementById('lista-perfis')
                 
-                if (perfis.length === 0) {
-                    listaPerfis.innerHTML = '<p style="text-align: center;">Nenhum perfil cadastrado ainda. Crie o seu!</p>'
+                if (!perfis || perfis.length === 0) {
+                    listaPerfis.innerHTML = '<p style="text-align: center; padding: 40px;">Nenhum perfil cadastrado ainda. Crie o seu!</p>'
                     return
                 }
                 
                 listaPerfis.innerHTML = perfis.map(perfil => `
-                    <div class="perfil-card" onclick="selecionarPerfil('${perfil.id}', '${perfil.nome}')" style="cursor: pointer;">
+                    <div class="perfil-card" onclick="selecionarPerfil('${perfil.id}', '${perfil.nome}')">
+                        ${perfil.foto_url ? `<img src="${perfil.foto_url}" alt="${perfil.nome}" class="foto-perfil">` : ''}
                         <h3>${perfil.nome}</h3>
                         <p><strong>${perfil.profissao}</strong></p>
                         <p>${perfil.descricao || ''}</p>
-                        <small>Clique para ver mensagens ➡️</small>
+                        <small>📨 Clique para ver mensagens</small>
                     </div>
                 `).join('')
                 
             } catch (error) {
-                console.error('Erro:', error)
+                console.error('Erro ao carregar perfis:', error)
+                document.getElementById('lista-perfis').innerHTML = '<p class="erro">Erro ao carregar perfis</p>'
             }
         }
         
@@ -266,7 +400,7 @@
         
         // Carregar mensagens do perfil selecionado
         async function carregarMensagens() {
-            if (!perfilSelecionado) return
+            if (!perfilSelecionado || !supabase) return
             
             try {
                 const { data: mensagens, error } = await supabase
@@ -279,26 +413,28 @@
                 
                 const listaMensagens = document.getElementById('lista-mensagens')
                 
-                if (mensagens.length === 0) {
-                    listaMensagens.innerHTML = '<p style="text-align: center;">Nenhuma mensagem ainda. Seja o primeiro a comentar!</p>'
+                if (!mensagens || mensagens.length === 0) {
+                    listaMensagens.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhuma mensagem ainda. Seja o primeiro a comentar!</p>'
                     return
                 }
                 
                 listaMensagens.innerHTML = mensagens.map(msg => `
                     <div class="mensagem-item">
                         <strong>${msg.nome_remetente}</strong>
-                        <small style="float: right;">${new Date(msg.created_at).toLocaleString()}</small>
+                        <small style="float: right;">${new Date(msg.created_at).toLocaleString('pt-BR')}</small>
                         <p style="margin-top: 10px;">${msg.mensagem}</p>
                     </div>
                 `).join('')
                 
             } catch (error) {
-                console.error('Erro:', error)
+                console.error('Erro ao carregar mensagens:', error)
             }
         }
         
         // Enviar mensagem
         async function enviarMensagem() {
+            if (!supabase) return
+
             const nome = document.getElementById('nome-remetente').value
             const texto = document.getElementById('texto-mensagem').value
             
@@ -327,7 +463,7 @@
                 // Recarregar mensagens
                 await carregarMensagens()
                 
-                alert('Mensagem enviada!')
+                alert('Mensagem enviada com sucesso!')
                 
             } catch (error) {
                 alert('Erro ao enviar mensagem: ' + error.message)
@@ -337,6 +473,7 @@
         // Mostrar mensagens de feedback
         function mostrarMensagem(local, texto, tipo) {
             const div = document.getElementById(`mensagem-${local}`)
+            if (!div) return
             div.innerHTML = `<div class="${tipo}">${texto}</div>`
             setTimeout(() => {
                 div.innerHTML = ''
