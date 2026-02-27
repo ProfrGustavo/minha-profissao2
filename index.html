@@ -396,367 +396,264 @@
         </div>
     </div>
 
-    <script>
-        // Configuração Supabase (substitua com seus dados)
-        const SUPABASE_URL = 'https://ipfkiedyuvfbqgwhpjrg.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_CzeOb-GVArfflJbOa01nmA_Url_bcvt';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+<script>
+    // 🔑 CONFIGURAÇÃO - COLE SEUS DADOS DO SUPABASE
+    const SUPABASE_URL = 'https://ipfkiedyuvfbqgwhpjrg.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_CzeOb-GVArfflJbOa01nmA_Url_bcvt';
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let clienteSelecionado = null;
 
-        // Variáveis de estado
-        let clientesCache = [];
+    // Funções de aba
+    window.mostrarAba = function(aba) {
+        document.getElementById('aba-cadastrar').style.display = aba === 'cadastrar' ? 'block' : 'none';
+        document.getElementById('aba-listar').style.display = aba === 'listar' ? 'block' : 'none';
+        if (aba === 'listar') {
+            carregarClientes();
+        }
+    };
 
-        // Controle de abas
-        window.mudarAba = function(abaNome) {
-            // Atualizar botões
-            document.querySelectorAll('.aba-btn').forEach(btn => btn.classList.remove('ativa'));
-            document.querySelector(`.aba-btn[onclick*="'${abaNome}'"]`).classList.add('ativa');
-            // Atualizar conteúdos
-            document.querySelectorAll('.conteudo-aba').forEach(div => div.classList.remove('ativa'));
-            document.getElementById(`aba-${abaNome}`).classList.add('ativa');
+    window.mostrarSubAba = function(sub) {
+        document.getElementById('sub-vendas').style.display = sub === 'vendas' ? 'block' : 'none';
+        document.getElementById('sub-satisfacao').style.display = sub === 'satisfacao' ? 'block' : 'none';
+        if (sub === 'vendas' && clienteSelecionado) {
+            carregarVendas(clienteSelecionado.id);
+        } else if (sub === 'satisfacao' && clienteSelecionado) {
+            carregarFeedbacks(clienteSelecionado.id);
+        }
+    };
 
-            // Carregar dados específicos se necessário
-            if (abaNome === 'dashboard') {
-                carregarDashboard();
-            } else if (abaNome === 'clientes') {
-                carregarListaClientesCompleta();
-            } else if (abaNome === 'vendas') {
-                carregarSelectClientes('venda-cliente');
-                carregarListaVendasCompleta();
-            } else if (abaNome === 'feedback') {
-                carregarSelectClientes('feedback-cliente');
-                carregarListaFeedbacksCompleta();
-            }
-        };
+    // Cadastro de cliente
+    window.cadastrarCliente = async function() {
+        const nome = document.getElementById('nome').value;
+        const email = document.getElementById('email').value;
+        const telefone = document.getElementById('telefone').value;
+        const empresa = document.getElementById('empresa').value;
+        const cargo = document.getElementById('cargo').value;
 
-        // ---------- FUNÇÕES DO DASHBOARD ----------
-        async function carregarDashboard() {
-            try {
-                // Total de clientes
-                const { count: totalClientes, error: errCli } = await supabase
-                    .from('clientes')
-                    .select('*', { count: 'exact', head: true });
-                if (!errCli) document.getElementById('total-clientes').innerText = totalClientes || 0;
-
-                // Vendas do mês (soma de valores)
-                const inicioMes = new Date();
-                inicioMes.setDate(1);
-                inicioMes.setHours(0,0,0,0);
-                const fimMes = new Date(inicioMes.getFullYear(), inicioMes.getMonth() + 1, 0, 23, 59, 59);
-
-                const { data: vendasMes, error: errVendasMes } = await supabase
-                    .from('vendas')
-                    .select('valor')
-                    .gte('data_venda', inicioMes.toISOString())
-                    .lte('data_venda', fimMes.toISOString())
-                    .in('status', ['em_andamento', 'concluida']); // ajuste se quiser só concluídas
-
-                let totalVendasMes = 0;
-                if (!errVendasMes && vendasMes) {
-                    totalVendasMes = vendasMes.reduce((acc, v) => acc + parseFloat(v.valor), 0);
-                }
-                document.getElementById('vendas-mes').innerText = `R$ ${totalVendasMes.toFixed(2)}`;
-
-                // Média de satisfação
-                const { data: satisfacoes, error: errSat } = await supabase
-                    .from('satisfacao')
-                    .select('nota');
-                if (!errSat && satisfacoes && satisfacoes.length > 0) {
-                    const media = satisfacoes.reduce((acc, s) => acc + s.nota, 0) / satisfacoes.length;
-                    document.getElementById('media-satisfacao').innerText = media.toFixed(1);
-                } else {
-                    document.getElementById('media-satisfacao').innerText = '0.0';
-                }
-
-                // Total de vendas (quantidade)
-                const { count: totalVendas, error: errVendasCount } = await supabase
-                    .from('vendas')
-                    .select('*', { count: 'exact', head: true });
-                document.getElementById('total-vendas').innerText = totalVendas || 0;
-
-                // Últimos 5 clientes
-                const { data: ultimosClientes, error: errUltCli } = await supabase
-                    .from('clientes')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(5);
-                if (!errUltCli) {
-                    const html = ultimosClientes.map(c => `
-                        <div class="lista-item">
-                            <strong>${c.nome}</strong>
-                            <div class="info">${c.email} | ${c.telefone || 'sem telefone'}</div>
-                            <div class="small">${c.empresa || ''} ${c.cargo ? ' - ' + c.cargo : ''}</div>
-                        </div>
-                    `).join('');
-                    document.getElementById('ultimos-clientes').innerHTML = html || '<p>Nenhum cliente cadastrado.</p>';
-                }
-
-                // Últimas 5 vendas (com nome do cliente)
-                const { data: ultimasVendas, error: errUltVendas } = await supabase
-                    .from('vendas')
-                    .select(`
-                        *,
-                        clientes ( nome )
-                    `)
-                    .order('data_venda', { ascending: false })
-                    .limit(5);
-                if (!errUltVendas) {
-                    const html = ultimasVendas.map(v => `
-                        <div class="lista-item">
-                            <strong>${v.clientes?.nome || 'Cliente removido'}</strong> - R$ ${parseFloat(v.valor).toFixed(2)}
-                            <div class="info">${new Date(v.data_venda).toLocaleDateString('pt-BR')} • ${v.status}</div>
-                            <div class="small">${v.descricao || ''}</div>
-                        </div>
-                    `).join('');
-                    document.getElementById('ultimas-vendas').innerHTML = html || '<p>Nenhuma venda registrada.</p>';
-                }
-
-                // Últimos 5 feedbacks
-                const { data: ultimosFeedbacks, error: errUltFeed } = await supabase
-                    .from('satisfacao')
-                    .select(`
-                        *,
-                        clientes ( nome )
-                    `)
-                    .order('created_at', { ascending: false })
-                    .limit(5);
-                if (!errUltFeed) {
-                    const html = ultimosFeedbacks.map(f => `
-                        <div class="lista-item">
-                            <strong>${f.clientes?.nome || 'Cliente removido'}</strong> - Nota: ${f.nota}/10
-                            <div class="info">${f.comentario || ''}</div>
-                            <div class="small">${new Date(f.created_at).toLocaleDateString('pt-BR')}</div>
-                        </div>
-                    `).join('');
-                    document.getElementById('ultimos-feedbacks').innerHTML = html || '<p>Nenhum feedback registrado.</p>';
-                }
-
-            } catch (error) {
-                console.error('Erro dashboard:', error);
-            }
+        if (!nome || !email) {
+            mostrarMensagem('cadastro', 'Nome e e-mail são obrigatórios!', 'erro');
+            return;
         }
 
-        // ---------- FUNÇÕES DE CLIENTES ----------
-        window.cadastrarCliente = async function() {
-            const nome = document.getElementById('cli-nome').value.trim();
-            const email = document.getElementById('cli-email').value.trim();
-            const telefone = document.getElementById('cli-telefone').value.trim();
-            const empresa = document.getElementById('cli-empresa').value.trim();
-            const cargo = document.getElementById('cli-cargo').value.trim();
+        try {
+            const { data, error } = await supabase
+                .from('clientes')
+                .insert([{ nome, email, telefone, empresa, cargo }]);
 
-            if (!nome || !email) {
-                mostrarMensagem('msg-cliente', 'Nome e e-mail são obrigatórios', 'erro');
+            if (error) throw error;
+
+            mostrarMensagem('cadastro', 'Cliente cadastrado com sucesso!', 'sucesso');
+            // Limpar campos
+            document.getElementById('nome').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('telefone').value = '';
+            document.getElementById('empresa').value = '';
+            document.getElementById('cargo').value = '';
+        } catch (error) {
+            console.error(error);
+            mostrarMensagem('cadastro', 'Erro: ' + error.message, 'erro');
+        }
+    };
+
+    // Carregar lista de clientes
+    async function carregarClientes() {
+        const lista = document.getElementById('lista-clientes');
+        lista.innerHTML = '<div class="loading">Carregando...</div>';
+        
+        try {
+            const { data: clientes, error } = await supabase
+                .from('clientes')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            console.log('Clientes carregados:', clientes);
+
+            if (!clientes || clientes.length === 0) {
+                lista.innerHTML = '<p style="text-align: center; padding: 40px;">Nenhum cliente cadastrado.</p>';
                 return;
             }
 
-            try {
-                const { error } = await supabase
-                    .from('clientes')
-                    .insert([{ nome, email, telefone, empresa, cargo }]);
+            lista.innerHTML = clientes.map(cli => `
+                <div class="perfil-card" onclick="selecionarCliente('${cli.id}', '${cli.nome}', '${cli.email}', '${cli.telefone || ''}', '${cli.empresa || ''}', '${cli.cargo || ''}')">
+                    <h3>${cli.nome}</h3>
+                    <p><strong>${cli.email}</strong></p>
+                    <p>${cli.empresa ? cli.empresa : ''} ${cli.cargo ? ' - ' + cli.cargo : ''}</p>
+                    <p>${cli.telefone ? '📞 ' + cli.telefone : ''}</p>
+                    <small>Clique para ver detalhes</small>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Erro ao carregar clientes:', error);
+            lista.innerHTML = '<p class="erro">Erro ao carregar clientes.</p>';
+        }
+    }
 
-                if (error) throw error;
+    // Selecionar cliente
+    window.selecionarCliente = function(id, nome, email, telefone, empresa, cargo) {
+        clienteSelecionado = { id, nome, email, telefone, empresa, cargo };
+        document.getElementById('cliente-nome').innerText = nome;
+        document.getElementById('cliente-info').innerHTML = `${email} ${telefone ? ' | ' + telefone : ''}<br>${empresa ? empresa : ''} ${cargo ? ' - ' + cargo : ''}`;
+        document.getElementById('detalhe-cliente').style.display = 'block';
+        
+        // Esconder sub-abas e mostrar vendas por padrão
+        mostrarSubAba('vendas');
+    };
 
-                mostrarMensagem('msg-cliente', 'Cliente cadastrado com sucesso!', 'sucesso');
-                // Limpar campos
-                document.getElementById('cli-nome').value = '';
-                document.getElementById('cli-email').value = '';
-                document.getElementById('cli-telefone').value = '';
-                document.getElementById('cli-empresa').value = '';
-                document.getElementById('cli-cargo').value = '';
-                // Recarregar lista
-                carregarListaClientesCompleta();
-                // Atualizar selects (presentes em outras abas)
-                carregarSelectClientes('venda-cliente');
-                carregarSelectClientes('feedback-cliente');
-            } catch (error) {
-                mostrarMensagem('msg-cliente', 'Erro: ' + error.message, 'erro');
-            }
-        };
+    // Vendas
+    window.registrarVenda = async function() {
+        if (!clienteSelecionado) return;
+        
+        const valor = parseFloat(document.getElementById('venda-valor').value);
+        const data_venda = document.getElementById('venda-data').value || new Date().toISOString().split('T')[0];
+        const status = document.getElementById('venda-status').value;
+        const descricao = document.getElementById('venda-descricao').value;
 
-        async function carregarListaClientesCompleta() {
-            const div = document.getElementById('lista-clientes-completa');
-            div.innerHTML = '<div class="loading">Carregando...</div>';
-            try {
-                const { data: clientes, error } = await supabase
-                    .from('clientes')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-                if (error) throw error;
-                if (!clientes || clientes.length === 0) {
-                    div.innerHTML = '<p>Nenhum cliente cadastrado.</p>';
-                    return;
-                }
-                div.innerHTML = clientes.map(c => `
-                    <div class="lista-item">
-                        <strong>${c.nome}</strong>
-                        <div class="info">${c.email} | ${c.telefone || 'sem telefone'}</div>
-                        <div class="small">${c.empresa || ''} ${c.cargo ? ' - ' + c.cargo : ''}</div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                div.innerHTML = '<p class="erro">Erro ao carregar clientes.</p>';
-            }
+        if (isNaN(valor) || valor <= 0) {
+            alert('Informe um valor válido para a venda');
+            return;
         }
 
-        // ---------- FUNÇÕES DE VENDAS ----------
-        window.registrarVenda = async function() {
-            const clienteId = document.getElementById('venda-cliente').value;
-            const valor = parseFloat(document.getElementById('venda-valor').value);
-            const data_venda = document.getElementById('venda-data').value || new Date().toISOString().split('T')[0];
-            const status = document.getElementById('venda-status').value;
-            const descricao = document.getElementById('venda-descricao').value.trim();
+        try {
+            const { error } = await supabase
+                .from('vendas')
+                .insert([{
+                    cliente_id: clienteSelecionado.id,
+                    valor,
+                    data_venda,
+                    status,
+                    descricao
+                }]);
 
-            if (!clienteId) {
-                mostrarMensagem('msg-venda', 'Selecione um cliente', 'erro');
-                return;
-            }
-            if (isNaN(valor) || valor <= 0) {
-                mostrarMensagem('msg-venda', 'Valor inválido', 'erro');
-                return;
-            }
+            if (error) throw error;
 
-            try {
-                const { error } = await supabase
-                    .from('vendas')
-                    .insert([{ cliente_id: clienteId, valor, data_venda, status, descricao }]);
+            // Limpar campos
+            document.getElementById('venda-valor').value = '';
+            document.getElementById('venda-data').value = '';
+            document.getElementById('venda-status').value = 'em_andamento';
+            document.getElementById('venda-descricao').value = '';
 
-                if (error) throw error;
-
-                mostrarMensagem('msg-venda', 'Venda registrada!', 'sucesso');
-                document.getElementById('venda-valor').value = '';
-                document.getElementById('venda-data').value = '';
-                document.getElementById('venda-status').value = 'em_andamento';
-                document.getElementById('venda-descricao').value = '';
-                carregarListaVendasCompleta();
-            } catch (error) {
-                mostrarMensagem('msg-venda', 'Erro: ' + error.message, 'erro');
-            }
-        };
-
-        async function carregarListaVendasCompleta() {
-            const div = document.getElementById('lista-vendas-completa');
-            div.innerHTML = '<div class="loading">Carregando...</div>';
-            try {
-                const { data: vendas, error } = await supabase
-                    .from('vendas')
-                    .select(`
-                        *,
-                        clientes ( nome )
-                    `)
-                    .order('data_venda', { ascending: false });
-                if (error) throw error;
-                if (!vendas || vendas.length === 0) {
-                    div.innerHTML = '<p>Nenhuma venda registrada.</p>';
-                    return;
-                }
-                div.innerHTML = vendas.map(v => `
-                    <div class="lista-item">
-                        <strong>${v.clientes?.nome || 'Cliente removido'}</strong> - R$ ${parseFloat(v.valor).toFixed(2)}
-                        <div class="info">${new Date(v.data_venda).toLocaleDateString('pt-BR')} • ${v.status}</div>
-                        <div class="small">${v.descricao || ''}</div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                div.innerHTML = '<p class="erro">Erro ao carregar vendas.</p>';
-            }
+            // Recarregar lista
+            carregarVendas(clienteSelecionado.id);
+            alert('Venda registrada com sucesso!');
+        } catch (error) {
+            console.error('Erro ao registrar venda:', error);
+            alert('Erro: ' + error.message);
         }
+    };
 
-        // ---------- FUNÇÕES DE FEEDBACK ----------
-        window.registrarFeedback = async function() {
-            const clienteId = document.getElementById('feedback-cliente').value;
-            const nota = parseInt(document.getElementById('feedback-nota').value);
-            const comentario = document.getElementById('feedback-comentario').value.trim();
+    async function carregarVendas(clienteId) {
+        const lista = document.getElementById('lista-vendas');
+        lista.innerHTML = '<div class="loading">Carregando vendas...</div>';
 
-            if (!clienteId) {
-                mostrarMensagem('msg-feedback', 'Selecione um cliente', 'erro');
-                return;
-            }
-            if (isNaN(nota) || nota < 0 || nota > 10) {
-                mostrarMensagem('msg-feedback', 'Nota deve ser entre 0 e 10', 'erro');
+        try {
+            const { data: vendas, error } = await supabase
+                .from('vendas')
+                .select('*')
+                .eq('cliente_id', clienteId)
+                .order('data_venda', { ascending: false });
+
+            if (error) throw error;
+            console.log('Vendas carregadas:', vendas);
+
+            if (!vendas || vendas.length === 0) {
+                lista.innerHTML = '<p>Nenhuma venda registrada.</p>';
                 return;
             }
 
-            try {
-                const { error } = await supabase
-                    .from('satisfacao')
-                    .insert([{ cliente_id: clienteId, nota, comentario }]);
+            lista.innerHTML = vendas.map(v => `
+                <div class="venda-item">
+                    <strong>R$ ${Number(v.valor).toFixed(2)}</strong> - ${new Date(v.data_venda).toLocaleDateString('pt-BR')}
+                    <span class="small">(${v.status})</span>
+                    <p>${v.descricao || ''}</p>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Erro ao carregar vendas:', error);
+            lista.innerHTML = '<p class="erro">Erro ao carregar vendas.</p>';
+        }
+    }
 
-                if (error) throw error;
+    // Satisfação
+    window.registrarFeedback = async function() {
+        if (!clienteSelecionado) return;
 
-                mostrarMensagem('msg-feedback', 'Feedback registrado!', 'sucesso');
-                document.getElementById('feedback-nota').value = '';
-                document.getElementById('feedback-comentario').value = '';
-                carregarListaFeedbacksCompleta();
-            } catch (error) {
-                mostrarMensagem('msg-feedback', 'Erro: ' + error.message, 'erro');
-            }
-        };
+        const nota = parseInt(document.getElementById('feedback-nota').value);
+        const comentario = document.getElementById('feedback-comentario').value;
 
-        async function carregarListaFeedbacksCompleta() {
-            const div = document.getElementById('lista-feedbacks-completa');
-            div.innerHTML = '<div class="loading">Carregando...</div>';
-            try {
-                const { data: feedbacks, error } = await supabase
-                    .from('satisfacao')
-                    .select(`
-                        *,
-                        clientes ( nome )
-                    `)
-                    .order('created_at', { ascending: false });
-                if (error) throw error;
-                if (!feedbacks || feedbacks.length === 0) {
-                    div.innerHTML = '<p>Nenhum feedback registrado.</p>';
-                    return;
-                }
-                div.innerHTML = feedbacks.map(f => `
-                    <div class="lista-item">
-                        <strong>${f.clientes?.nome || 'Cliente removido'}</strong> - Nota: ${f.nota}/10
-                        <div class="info">${f.comentario || ''}</div>
-                        <div class="small">${new Date(f.created_at).toLocaleDateString('pt-BR')}</div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                div.innerHTML = '<p class="erro">Erro ao carregar feedbacks.</p>';
-            }
+        if (isNaN(nota) || nota < 0 || nota > 10) {
+            alert('Nota deve ser entre 0 e 10');
+            return;
         }
 
-        // ---------- FUNÇÕES AUXILIARES ----------
-        function mostrarMensagem(elementId, texto, tipo) {
-            const div = document.getElementById(elementId);
-            div.innerHTML = `<div class="${tipo}">${texto}</div>`;
-            setTimeout(() => {
-                div.innerHTML = '';
-            }, 4000);
-        }
+        try {
+            const { error } = await supabase
+                .from('satisfacao')
+                .insert([{
+                    cliente_id: clienteSelecionado.id,
+                    nota,
+                    comentario
+                    // data_avaliacao será preenchida automaticamente com now()
+                }]);
 
-        // Carregar clientes nos selects
-        async function carregarSelectClientes(selectId) {
-            const select = document.getElementById(selectId);
-            if (!select) return;
-            select.innerHTML = '<option value="">Carregando...</option>';
-            try {
-                const { data: clientes, error } = await supabase
-                    .from('clientes')
-                    .select('id, nome')
-                    .order('nome');
-                if (error) throw error;
-                let options = '<option value="">Selecione um cliente</option>';
-                clientes.forEach(c => {
-                    options += `<option value="${c.id}">${c.nome}</option>`;
-                });
-                select.innerHTML = options;
-            } catch (error) {
-                select.innerHTML = '<option value="">Erro ao carregar clientes</option>';
+            if (error) throw error;
+
+            document.getElementById('feedback-nota').value = '';
+            document.getElementById('feedback-comentario').value = '';
+
+            carregarFeedbacks(clienteSelecionado.id);
+            alert('Feedback registrado com sucesso!');
+        } catch (error) {
+            console.error('Erro ao registrar feedback:', error);
+            alert('Erro: ' + error.message);
+        }
+    };
+
+    async function carregarFeedbacks(clienteId) {
+        const lista = document.getElementById('lista-feedbacks');
+        lista.innerHTML = '<div class="loading">Carregando feedbacks...</div>';
+
+        try {
+            const { data: feedbacks, error } = await supabase
+                .from('satisfacao')
+                .select('*')
+                .eq('cliente_id', clienteId)
+                .order('data_avaliacao', { ascending: false }); // CORRIGIDO
+
+            if (error) throw error;
+            console.log('Feedbacks carregados:', feedbacks);
+
+            if (!feedbacks || feedbacks.length === 0) {
+                lista.innerHTML = '<p>Nenhum feedback registrado.</p>';
+                return;
             }
-        }
 
-        // Inicialização
-        (function() {
-            // Carregar dashboard inicialmente
-            carregarDashboard();
-            // Pré-carregar clientes para selects
-            carregarSelectClientes('venda-cliente');
-            carregarSelectClientes('feedback-cliente');
-        })();
-    </script>
+            lista.innerHTML = feedbacks.map(f => `
+                <div class="feedback-item">
+                    <strong>Nota: ${f.nota}</strong> - ${new Date(f.data_avaliacao).toLocaleDateString('pt-BR')}
+                    <p>${f.comentario || ''}</p>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Erro ao carregar feedbacks:', error);
+            lista.innerHTML = '<p class="erro">Erro ao carregar feedbacks.</p>';
+        }
+    }
+
+    function mostrarMensagem(local, texto, tipo) {
+        const div = document.getElementById(`mensagem-${local}`);
+        div.innerHTML = `<div class="${tipo}">${texto}</div>`;
+        setTimeout(() => {
+            div.innerHTML = '';
+        }, 3000);
+    }
+
+    // Inicialização
+    (function() {
+        mostrarAba('cadastrar');
+    })();
+</script>
 </body>
 </html>
