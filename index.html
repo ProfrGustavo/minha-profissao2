@@ -1,28 +1,26 @@
-<!-- mural-profissional.html -->
+<!-- crm-simples.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mural Profissional da Turma</title>
+    <title>CRM Simples - Exemplo</title>
     <style>
+        /* Seu CSS existente, pode manter igual */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
         body {
             font-family: Arial, sans-serif;
             background: #f0f2f5;
             padding: 20px;
         }
-        
         .container {
             max-width: 800px;
             margin: 0 auto;
         }
-        
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -31,7 +29,6 @@
             text-align: center;
             margin-bottom: 30px;
         }
-        
         .form-perfil {
             background: white;
             padding: 30px;
@@ -39,9 +36,9 @@
             margin-bottom: 30px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        
         .form-perfil input,
-        .form-perfil textarea {
+        .form-perfil textarea,
+        .form-perfil select {
             width: 100%;
             padding: 10px;
             margin: 10px 0 20px 0;
@@ -49,7 +46,6 @@
             border-radius: 5px;
             font-size: 16px;
         }
-        
         .perfil-card {
             background: white;
             padding: 20px;
@@ -59,19 +55,16 @@
             cursor: pointer;
             transition: transform 0.2s;
         }
-        
         .perfil-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-        
         .mensagem-form {
             background: #f9f9f9;
             padding: 20px;
             border-radius: 5px;
             margin-top: 20px;
         }
-        
         .mensagem-item {
             background: white;
             padding: 15px;
@@ -79,7 +72,6 @@
             margin: 10px 0;
             border-radius: 5px;
         }
-        
         button {
             background: #667eea;
             color: white;
@@ -89,12 +81,11 @@
             cursor: pointer;
             font-size: 16px;
             transition: background 0.2s;
+            margin-right: 10px;
         }
-        
         button:hover {
             background: #764ba2;
         }
-        
         .erro {
             background: #ff4444;
             color: white;
@@ -102,7 +93,6 @@
             border-radius: 5px;
             margin: 10px 0;
         }
-        
         .sucesso {
             background: #00C851;
             color: white;
@@ -110,339 +100,361 @@
             border-radius: 5px;
             margin: 10px 0;
         }
-        
         .loading {
             text-align: center;
             padding: 20px;
             color: #666;
         }
-        
-        .foto-perfil {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin-bottom: 10px;
-        }
-
         .aba-botoes {
             text-align: center;
             margin-bottom: 20px;
         }
-
         .aba-botoes button {
             margin: 0 5px;
         }
+        .cliente-detalhe {
+            margin-top: 20px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .venda-item, .feedback-item {
+            background: white;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        .small {
+            font-size: 0.85em;
+            color: #666;
+        }
     </style>
-    <!-- Supabase JS (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📋 Mural Profissional da Turma</h1>
-            <p>Crie seu perfil e receba mensagens dos colegas!</p>
+            <h1>📊 CRM Simples (Exemplo)</h1>
+            <p>Cadastro de clientes, vendas e satisfação</p>
         </div>
 
-        <!-- Abas para alternar entre Criar Perfil e Ver Perfis -->
+        <!-- Abas -->
         <div class="aba-botoes">
-            <button onclick="mostrarAba('criar')">➕ Criar Perfil</button>
-            <button onclick="mostrarAba('ver')">👥 Ver Perfis</button>
+            <button onclick="mostrarAba('cadastrar')">➕ Cadastrar Cliente</button>
+            <button onclick="mostrarAba('listar')">📋 Listar Clientes</button>
         </div>
 
-        <!-- ABA 1: Criar Perfil -->
-        <div id="aba-criar" class="form-perfil">
-            <h2 style="margin-bottom: 20px;">Crie seu Perfil</h2>
+        <!-- ABA 1: Cadastrar Cliente -->
+        <div id="aba-cadastrar" class="form-perfil">
+            <h2>Cadastrar Novo Cliente</h2>
+            <div id="mensagem-cadastro"></div>
             
-            <div id="mensagem-criar"></div>
+            <input type="text" id="nome" placeholder="Nome completo" required>
+            <input type="email" id="email" placeholder="E-mail" required>
+            <input type="text" id="telefone" placeholder="Telefone">
+            <input type="text" id="empresa" placeholder="Empresa">
+            <input type="text" id="cargo" placeholder="Cargo">
             
-            <input type="text" id="nome" placeholder="Seu nome completo" required>
-            <input type="text" id="profissao" placeholder="Sua profissão (ex: Estudante de Programação)" required>
-            <textarea id="descricao" placeholder="Fale um pouco sobre você..." rows="4"></textarea>
-            <input type="url" id="foto" placeholder="URL da sua foto (opcional)">
-            
-            <button onclick="criarPerfil()">Criar Perfil</button>
+            <button onclick="cadastrarCliente()">Salvar Cliente</button>
         </div>
 
-        <!-- ABA 2: Ver Perfis e Mensagens -->
-        <div id="aba-ver" style="display: none;">
-            <div id="lista-perfis" class="loading">Carregando perfis...</div>
+        <!-- ABA 2: Listar Clientes -->
+        <div id="aba-listar" style="display: none;">
+            <div id="lista-clientes" class="loading">Carregando clientes...</div>
             
-            <!-- Área de mensagens (aparece quando seleciona um perfil) -->
-            <div id="area-mensagens" style="display: none; margin-top: 30px;">
-                <div class="form-perfil">
-                    <h3 id="titulo-perfil"></h3>
+            <!-- Detalhe do cliente selecionado -->
+            <div id="detalhe-cliente" style="display: none;" class="cliente-detalhe">
+                <h3 id="cliente-nome"></h3>
+                <p id="cliente-info"></p>
+                
+                <!-- Sub-abas internas: Vendas e Satisfação -->
+                <div style="margin: 20px 0;">
+                    <button onclick="mostrarSubAba('vendas')">📦 Vendas</button>
+                    <button onclick="mostrarSubAba('satisfacao')">⭐ Satisfação</button>
+                </div>
+                
+                <!-- Área de Vendas -->
+                <div id="sub-vendas" style="display: none;">
+                    <h4>Registrar Nova Venda</h4>
+                    <input type="number" id="venda-valor" placeholder="Valor (ex: 1500.00)" step="0.01">
+                    <input type="date" id="venda-data" value="">
+                    <select id="venda-status">
+                        <option value="em_andamento">Em andamento</option>
+                        <option value="concluida">Concluída</option>
+                        <option value="cancelada">Cancelada</option>
+                    </select>
+                    <textarea id="venda-descricao" placeholder="Descrição da venda" rows="2"></textarea>
+                    <button onclick="registrarVenda()">Registrar Venda</button>
                     
-                    <div class="mensagem-form">
-                        <h4>Deixe uma mensagem</h4>
-                        <input type="text" id="nome-remetente" placeholder="Seu nome" style="margin: 10px 0;">
-                        <textarea id="texto-mensagem" placeholder="Sua mensagem..." rows="3" style="margin: 10px 0;"></textarea>
-                        <button onclick="enviarMensagem()">Enviar Mensagem</button>
-                    </div>
+                    <h4 style="margin-top: 30px;">Vendas Registradas</h4>
+                    <div id="lista-vendas"></div>
+                </div>
+                
+                <!-- Área de Satisfação -->
+                <div id="sub-satisfacao" style="display: none;">
+                    <h4>Registrar Feedback de Satisfação</h4>
+                    <input type="number" id="feedback-nota" placeholder="Nota (0 a 10)" min="0" max="10">
+                    <textarea id="feedback-comentario" placeholder="Comentário (opcional)" rows="2"></textarea>
+                    <button onclick="registrarFeedback()">Registrar Feedback</button>
                     
-                    <div id="lista-mensagens" style="margin-top: 20px;"></div>
+                    <h4 style="margin-top: 30px;">Feedbacks Recebidos</h4>
+                    <div id="lista-feedbacks"></div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // 🔑 CONFIGURAÇÃO ÚNICA - COLE SEUS DADOS AQUI
+        // 🔑 CONFIGURAÇÃO - COLE SEUS DADOS DO SUPABASE
         const SUPABASE_URL = 'https://ipfkiedyuvfbqgwhpjrg.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_CzeOb-GVArfflJbOa01nmA_Url_bcvt';
         
-        // Inicializar Supabase (UMA ÚNICA VEZ)
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        // Variáveis globais
-        let perfilSelecionado = null;
+        let clienteSelecionado = null;
 
-        // Funções globais
+        // Funções de aba
         window.mostrarAba = function(aba) {
-            console.log('Mostrando aba:', aba);
-            const abaCriar = document.getElementById('aba-criar');
-            const abaVer = document.getElementById('aba-ver');
-            
-            if (abaCriar && abaVer) {
-                if (aba === 'criar') {
-                    abaCriar.style.display = 'block';
-                    abaVer.style.display = 'none';
-                } else {
-                    abaCriar.style.display = 'none';
-                    abaVer.style.display = 'block';
-                    carregarPerfis();
-                }
+            document.getElementById('aba-cadastrar').style.display = aba === 'cadastrar' ? 'block' : 'none';
+            document.getElementById('aba-listar').style.display = aba === 'listar' ? 'block' : 'none';
+            if (aba === 'listar') {
+                carregarClientes();
             }
         };
 
-        window.criarPerfil = async function() {
-            console.log('Iniciando criação de perfil...');
-            
-            const nome = document.getElementById('nome')?.value;
-            const profissao = document.getElementById('profissao')?.value;
-            const descricao = document.getElementById('descricao')?.value;
-            const foto_url = document.getElementById('foto')?.value;
-            
-            console.log('Dados:', { nome, profissao, descricao, foto_url });
-            
-            if (!nome || !profissao) {
-                mostrarMensagem('criar', 'Preencha nome e profissão!', 'erro');
+        window.mostrarSubAba = function(sub) {
+            document.getElementById('sub-vendas').style.display = sub === 'vendas' ? 'block' : 'none';
+            document.getElementById('sub-satisfacao').style.display = sub === 'satisfacao' ? 'block' : 'none';
+            if (sub === 'vendas' && clienteSelecionado) {
+                carregarVendas(clienteSelecionado.id);
+            } else if (sub === 'satisfacao' && clienteSelecionado) {
+                carregarFeedbacks(clienteSelecionado.id);
+            }
+        };
+
+        // Cadastro de cliente
+        window.cadastrarCliente = async function() {
+            const nome = document.getElementById('nome').value;
+            const email = document.getElementById('email').value;
+            const telefone = document.getElementById('telefone').value;
+            const empresa = document.getElementById('empresa').value;
+            const cargo = document.getElementById('cargo').value;
+
+            if (!nome || !email) {
+                mostrarMensagem('cadastro', 'Nome e e-mail são obrigatórios!', 'erro');
                 return;
             }
-            
+
             try {
-                // Criar slug simples
-                const slug = nome.toLowerCase()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/^-|-$/g, '');
-                
-                console.log('Slug gerado:', slug);
-                
-                const { data, error } = await supabaseClient
-                    .from('perfis')
-                    .insert([
-                        {
-                            nome: nome,
-                            profissao: profissao,
-                            descricao: descricao || '',
-                            foto_url: foto_url || null,
-                            slug: slug
-                        }
-                    ]);
-                
-                if (error) {
-                    console.error('Erro do Supabase:', error);
-                    throw error;
-                }
-                
-                console.log('Perfil criado:', data);
-                mostrarMensagem('criar', 'Perfil criado com sucesso!', 'sucesso');
-                
-                // Limpar formulário
-                document.getElementById('nome').value = '';
-                document.getElementById('profissao').value = '';
-                document.getElementById('descricao').value = '';
-                document.getElementById('foto').value = '';
-                
-            } catch (error) {
-                console.error('Erro detalhado:', error);
-                let mensagem = 'Erro ao criar perfil: ';
-                
-                if (error.message && error.message.includes('relation') && error.message.includes('does not exist')) {
-                    mensagem = '❌ Tabela "perfis" não existe! Crie as tabelas no SQL Editor do Supabase.';
-                    console.log('%c⚠️ EXECUTE ESTE SQL NO SUPABASE:', 'font-size: 16px; font-weight: bold; color: red;');
-                    console.log(`
-                        CREATE TABLE perfis (
-                            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                            nome TEXT NOT NULL,
-                            profissao TEXT NOT NULL,
-                            descricao TEXT,
-                            foto_url TEXT,
-                            slug TEXT UNIQUE,
-                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                        );
+                const { data, error } = await supabase
+                    .from('clientes')
+                    .insert([{ nome, email, telefone, empresa, cargo }]);
 
-                        CREATE TABLE mensagens (
-                            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                            perfil_id UUID REFERENCES perfis(id) ON DELETE CASCADE,
-                            nome_remetente TEXT NOT NULL,
-                            mensagem TEXT NOT NULL,
-                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                        );
-
-                        ALTER TABLE perfis ENABLE ROW LEVEL SECURITY;
-                        ALTER TABLE mensagens ENABLE ROW LEVEL SECURITY;
-
-                        CREATE POLICY "Permitir tudo perfis" ON perfis FOR ALL USING (true);
-                        CREATE POLICY "Permitir tudo mensagens" ON mensagens FOR ALL USING (true);
-                    `);
-                } else {
-                    mensagem += error.message || 'Erro desconhecido';
-                }
-                
-                mostrarMensagem('criar', mensagem, 'erro');
-            }
-        };
-
-        window.selecionarPerfil = async function(id, nome) {
-            console.log('Perfil selecionado:', id, nome);
-            perfilSelecionado = id;
-            const tituloPerfil = document.getElementById('titulo-perfil');
-            const areaMensagens = document.getElementById('area-mensagens');
-            
-            if (tituloPerfil) tituloPerfil.innerHTML = `Mensagens para ${nome}`;
-            if (areaMensagens) areaMensagens.style.display = 'block';
-            
-            await carregarMensagens();
-        };
-
-        window.enviarMensagem = async function() {
-            const nome = document.getElementById('nome-remetente')?.value;
-            const texto = document.getElementById('texto-mensagem')?.value;
-            
-            if (!nome || !texto) {
-                alert('Preencha seu nome e a mensagem!');
-                return;
-            }
-            
-            try {
-                const { error } = await supabaseClient
-                    .from('mensagens')
-                    .insert([
-                        {
-                            perfil_id: perfilSelecionado,
-                            nome_remetente: nome,
-                            mensagem: texto
-                        }
-                    ]);
-                
                 if (error) throw error;
-                
-                // Limpar formulário
-                document.getElementById('nome-remetente').value = '';
-                document.getElementById('texto-mensagem').value = '';
-                
-                // Recarregar mensagens
-                await carregarMensagens();
-                
-                alert('Mensagem enviada com sucesso!');
-                
+
+                mostrarMensagem('cadastro', 'Cliente cadastrado com sucesso!', 'sucesso');
+                // Limpar campos
+                document.getElementById('nome').value = '';
+                document.getElementById('email').value = '';
+                document.getElementById('telefone').value = '';
+                document.getElementById('empresa').value = '';
+                document.getElementById('cargo').value = '';
             } catch (error) {
-                console.error('Erro ao enviar:', error);
-                alert('Erro ao enviar mensagem: ' + (error.message || 'Erro desconhecido'));
+                console.error(error);
+                mostrarMensagem('cadastro', 'Erro: ' + error.message, 'erro');
             }
         };
 
-        // Funções internas
-        async function carregarPerfis() {
-            console.log('Carregando perfis...');
+        // Carregar lista de clientes
+        async function carregarClientes() {
+            const lista = document.getElementById('lista-clientes');
+            lista.innerHTML = '<div class="loading">Carregando...</div>';
             
             try {
-                const { data: perfis, error } = await supabaseClient
-                    .from('perfis')
+                const { data: clientes, error } = await supabase
+                    .from('clientes')
                     .select('*')
                     .order('created_at', { ascending: false });
-                
+
                 if (error) throw error;
-                
-                const listaPerfis = document.getElementById('lista-perfis');
-                
-                if (!perfis || perfis.length === 0) {
-                    listaPerfis.innerHTML = '<p style="text-align: center; padding: 40px;">Nenhum perfil cadastrado ainda. Crie o seu!</p>';
+
+                if (!clientes || clientes.length === 0) {
+                    lista.innerHTML = '<p style="text-align: center; padding: 40px;">Nenhum cliente cadastrado.</p>';
                     return;
                 }
-                
-                listaPerfis.innerHTML = perfis.map(perfil => `
-                    <div class="perfil-card" onclick="selecionarPerfil('${perfil.id}', '${perfil.nome}')">
-                        ${perfil.foto_url ? `<img src="${perfil.foto_url}" alt="${perfil.nome}" class="foto-perfil">` : ''}
-                        <h3>${perfil.nome}</h3>
-                        <p><strong>${perfil.profissao}</strong></p>
-                        <p>${perfil.descricao || ''}</p>
-                        <small>📨 Clique para ver mensagens</small>
+
+                lista.innerHTML = clientes.map(cli => `
+                    <div class="perfil-card" onclick="selecionarCliente('${cli.id}', '${cli.nome}', '${cli.email}', '${cli.telefone || ''}', '${cli.empresa || ''}', '${cli.cargo || ''}')">
+                        <h3>${cli.nome}</h3>
+                        <p><strong>${cli.email}</strong></p>
+                        <p>${cli.empresa ? cli.empresa : ''} ${cli.cargo ? ' - ' + cli.cargo : ''}</p>
+                        <p>${cli.telefone ? '📞 ' + cli.telefone : ''}</p>
+                        <small>Clique para ver detalhes</small>
                     </div>
                 `).join('');
-                
             } catch (error) {
-                console.error('Erro ao carregar perfis:', error);
-                document.getElementById('lista-perfis').innerHTML = '<p class="erro">Erro ao carregar perfis. Verifique o console.</p>';
+                lista.innerHTML = '<p class="erro">Erro ao carregar clientes.</p>';
             }
         }
 
-        async function carregarMensagens() {
-            if (!perfilSelecionado) return;
+        // Selecionar cliente
+        window.selecionarCliente = function(id, nome, email, telefone, empresa, cargo) {
+            clienteSelecionado = { id, nome, email, telefone, empresa, cargo };
+            document.getElementById('cliente-nome').innerText = nome;
+            document.getElementById('cliente-info').innerHTML = `${email} ${telefone ? ' | ' + telefone : ''}<br>${empresa ? empresa : ''} ${cargo ? ' - ' + cargo : ''}`;
+            document.getElementById('detalhe-cliente').style.display = 'block';
             
-            console.log('Carregando mensagens do perfil:', perfilSelecionado);
+            // Esconder sub-abas e mostrar vendas por padrão
+            mostrarSubAba('vendas');
             
+            // Carregar vendas
+            carregarVendas(id);
+        };
+
+        // Vendas
+        window.registrarVenda = async function() {
+            if (!clienteSelecionado) return;
+            
+            const valor = parseFloat(document.getElementById('venda-valor').value);
+            const data_venda = document.getElementById('venda-data').value || new Date().toISOString().split('T')[0];
+            const status = document.getElementById('venda-status').value;
+            const descricao = document.getElementById('venda-descricao').value;
+
+            if (!valor) {
+                alert('Informe o valor da venda');
+                return;
+            }
+
             try {
-                const { data: mensagens, error } = await supabaseClient
-                    .from('mensagens')
-                    .select('*')
-                    .eq('perfil_id', perfilSelecionado)
-                    .order('created_at', { ascending: false });
-                
+                const { error } = await supabase
+                    .from('vendas')
+                    .insert([{
+                        cliente_id: clienteSelecionado.id,
+                        valor,
+                        data_venda,
+                        status,
+                        descricao
+                    }]);
+
                 if (error) throw error;
-                
-                const listaMensagens = document.getElementById('lista-mensagens');
-                
-                if (!mensagens || mensagens.length === 0) {
-                    listaMensagens.innerHTML = '<p style="text-align: center; padding: 20px;">Nenhuma mensagem ainda. Seja o primeiro a comentar!</p>';
+
+                // Limpar campos
+                document.getElementById('venda-valor').value = '';
+                document.getElementById('venda-data').value = '';
+                document.getElementById('venda-status').value = 'em_andamento';
+                document.getElementById('venda-descricao').value = '';
+
+                // Recarregar lista
+                carregarVendas(clienteSelecionado.id);
+            } catch (error) {
+                alert('Erro: ' + error.message);
+            }
+        };
+
+        async function carregarVendas(clienteId) {
+            const lista = document.getElementById('lista-vendas');
+            lista.innerHTML = '<div class="loading">Carregando vendas...</div>';
+
+            try {
+                const { data: vendas, error } = await supabase
+                    .from('vendas')
+                    .select('*')
+                    .eq('cliente_id', clienteId)
+                    .order('data_venda', { ascending: false });
+
+                if (error) throw error;
+
+                if (!vendas || vendas.length === 0) {
+                    lista.innerHTML = '<p>Nenhuma venda registrada.</p>';
                     return;
                 }
-                
-                listaMensagens.innerHTML = mensagens.map(msg => `
-                    <div class="mensagem-item">
-                        <strong>${msg.nome_remetente}</strong>
-                        <small style="float: right;">${new Date(msg.created_at).toLocaleString('pt-BR')}</small>
-                        <p style="margin-top: 10px;">${msg.mensagem}</p>
+
+                lista.innerHTML = vendas.map(v => `
+                    <div class="venda-item">
+                        <strong>R$ ${v.valor.toFixed(2)}</strong> - ${new Date(v.data_venda).toLocaleDateString('pt-BR')}
+                        <span class="small">(${v.status})</span>
+                        <p>${v.descricao || ''}</p>
                     </div>
                 `).join('');
-                
             } catch (error) {
-                console.error('Erro ao carregar mensagens:', error);
+                lista.innerHTML = '<p class="erro">Erro ao carregar vendas.</p>';
+            }
+        }
+
+        // Satisfação
+        window.registrarFeedback = async function() {
+            if (!clienteSelecionado) return;
+
+            const nota = parseInt(document.getElementById('feedback-nota').value);
+            const comentario = document.getElementById('feedback-comentario').value;
+
+            if (isNaN(nota) || nota < 0 || nota > 10) {
+                alert('Nota deve ser entre 0 e 10');
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('satisfacao')
+                    .insert([{
+                        cliente_id: clienteSelecionado.id,
+                        nota,
+                        comentario
+                    }]);
+
+                if (error) throw error;
+
+                document.getElementById('feedback-nota').value = '';
+                document.getElementById('feedback-comentario').value = '';
+
+                carregarFeedbacks(clienteSelecionado.id);
+            } catch (error) {
+                alert('Erro: ' + error.message);
+            }
+        };
+
+        async function carregarFeedbacks(clienteId) {
+            const lista = document.getElementById('lista-feedbacks');
+            lista.innerHTML = '<div class="loading">Carregando feedbacks...</div>';
+
+            try {
+                const { data: feedbacks, error } = await supabase
+                    .from('satisfacao')
+                    .select('*')
+                    .eq('cliente_id', clienteId)
+                    .order('data_feedback', { ascending: false });
+
+                if (error) throw error;
+
+                if (!feedbacks || feedbacks.length === 0) {
+                    lista.innerHTML = '<p>Nenhum feedback registrado.</p>';
+                    return;
+                }
+
+                lista.innerHTML = feedbacks.map(f => `
+                    <div class="feedback-item">
+                        <strong>Nota: ${f.nota}</strong> - ${new Date(f.data_feedback).toLocaleDateString('pt-BR')}
+                        <p>${f.comentario || ''}</p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                lista.innerHTML = '<p class="erro">Erro ao carregar feedbacks.</p>';
             }
         }
 
         function mostrarMensagem(local, texto, tipo) {
             const div = document.getElementById(`mensagem-${local}`);
-            if (!div) return;
             div.innerHTML = `<div class="${tipo}">${texto}</div>`;
             setTimeout(() => {
                 div.innerHTML = '';
-            }, 5000);
+            }, 3000);
         }
 
         // Inicialização
         (function() {
-            console.log('Iniciando aplicação...');
-            console.log('URL:', SUPABASE_URL);
-            console.log('Key:', SUPABASE_KEY.substring(0, 10) + '...');
-            
-            // Mostrar aba criar por padrão
-            if (typeof window.mostrarAba === 'function') {
-                window.mostrarAba('criar');
-            }
+            // Mostrar aba cadastrar por padrão
+            mostrarAba('cadastrar');
         })();
     </script>
 </body>
